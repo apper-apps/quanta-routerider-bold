@@ -1,0 +1,74 @@
+[
+  {
+    "Id": 1,
+    "routeId": 1,
+    "seats": ["3A", "3B"],
+    "passengers": [
+      {
+        "name": "John Smith",
+        "phone": "+1-555-0123",
+        "email": "john.smith@email.com",
+        "seatNumber": "3A"
+      },
+      {
+        "name": "Jane Smith",
+        "phone": "+1-555-0124",
+        "email": "jane.smith@email.com",
+        "seatNumber": "3B"
+      }
+    ],
+    "totalPrice": 90,
+    "status": "confirmed",
+    "bookingDate": "2024-01-15T10:30:00Z",
+    "travelDate": "2024-01-25",
+    "bookingReference": "RR-2024-001"
+  },
+  {
+    "Id": 2,
+    "routeId": 4,
+    "seats": ["5C"],
+    "passengers": [
+      {
+        "name": "Michael Johnson",
+        "phone": "+1-555-0456",
+        "email": "michael.j@email.com",
+        "seatNumber": "5C"
+      }
+    ],
+    "totalPrice": 65,
+    "status": "confirmed",
+    "bookingDate": "2024-01-16T14:20:00Z",
+    "travelDate": "2024-01-30",
+    "bookingReference": "RR-2024-002"
+  },
+  {
+    "Id": 3,
+    "routeId": 7,
+    "seats": ["2A", "2B", "2C"],
+    "passengers": [
+      {
+        "name": "Sarah Wilson",
+        "phone": "+1-555-0789",
+        "email": "sarah.wilson@email.com",
+        "seatNumber": "2A"
+      },
+      {
+        "name": "David Wilson",
+        "phone": "+1-555-0790",
+        "email": "david.wilson@email.com",
+        "seatNumber": "2B"
+      },
+      {
+        "name": "Emma Wilson",
+        "phone": "+1-555-0791",
+        "email": "emma.wilson@email.com",
+        "seatNumber": "2C"
+      }
+    ],
+    "totalPrice": 255,
+    "status": "confirmed",
+    "bookingDate": "2024-01-18T09:15:00Z",
+    "travelDate": "2024-02-05",
+    "bookingReference": "RR-2024-003"
+  }
+]
