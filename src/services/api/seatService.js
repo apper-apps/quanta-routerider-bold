@@ -1,54 +1,117 @@
-import seatsData from "@/services/mockData/seats.json";
-
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
 export const seatService = {
   async getSeatsByRouteId(routeId) {
-    await delay(300);
-    
     try {
-      // Generate seats for any route (40 seats standard layout)
-      const seats = [];
-      const occupiedSeats = [2, 7, 12, 18, 27, 38]; // Some random occupied seats
-      
-      for (let row = 1; row <= 10; row++) {
-        for (let col = 1; col <= 4; col++) {
-          const seatNumber = row + String.fromCharCode(64 + col); // 1A, 1B, etc.
-          const seatId = (row - 1) * 4 + col;
-          const isOccupied = occupiedSeats.includes(seatId);
-          
-          seats.push({
-            Id: seatId,
-            routeId: parseInt(routeId),
-            number: seatNumber,
-            type: col === 1 || col === 4 ? "window" : "aisle",
-            status: isOccupied ? "occupied" : "available",
-            price: 45,
-            row: row,
-            column: col
-          });
-        }
+      // Initialize ApperClient with Project ID and Public Key
+      const { ApperClient } = window.ApperSDK;
+      const apperClient = new ApperClient({
+        apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+        apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+      });
+
+      const params = {
+        fields: [
+          { field: { Name: "Name" } },
+          { field: { Name: "routeId" } },
+          { field: { Name: "number" } },
+          { field: { Name: "type" } },
+          { field: { Name: "status" } },
+          { field: { Name: "price" } },
+          { field: { Name: "row" } },
+          { field: { Name: "column" } }
+        ],
+        where: [
+          { FieldName: "routeId", Operator: "EqualTo", Values: [parseInt(routeId)] }
+        ],
+        orderBy: [
+          { fieldName: "row", sorttype: "ASC" },
+          { fieldName: "column", sorttype: "ASC" }
+        ],
+        pagingInfo: { limit: 100, offset: 0 }
+      };
+
+      const response = await apperClient.fetchRecords('seat', params);
+
+      if (!response.success) {
+        console.error(response.message);
+        throw new Error(response.message);
       }
-      
-      return seats;
+
+      return response.data || [];
     } catch (error) {
-      throw new Error("Failed to fetch seat information. Please try again.");
+      if (error?.response?.data?.message) {
+        console.error("Error fetching seats for route " + routeId + ":", error?.response?.data?.message);
+        throw new Error(error.response.data.message);
+      } else {
+        console.error("Error fetching seats:", error.message);
+        throw new Error("Failed to fetch seat information. Please try again.");
+      }
     }
   },
 
   async reserveSeats(routeId, seatNumbers) {
-    await delay(500);
-    
     try {
-      // Simulate seat reservation
-      console.log(`Reserved seats ${seatNumbers.join(", ")} for route ${routeId}`);
+      // Initialize ApperClient with Project ID and Public Key
+      const { ApperClient } = window.ApperSDK;
+      const apperClient = new ApperClient({
+        apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+        apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+      });
+
+      // First, get the seats to update
+      const getParams = {
+        fields: [
+          { field: { Name: "Name" } },
+          { field: { Name: "routeId" } },
+          { field: { Name: "number" } },
+          { field: { Name: "status" } }
+        ],
+        where: [
+          { FieldName: "routeId", Operator: "EqualTo", Values: [parseInt(routeId)] },
+          { FieldName: "number", Operator: "ExactMatch", Values: seatNumbers }
+        ]
+      };
+
+      const getResponse = await apperClient.fetchRecords('seat', getParams);
+
+      if (!getResponse.success) {
+        console.error(getResponse.message);
+        throw new Error(getResponse.message);
+      }
+
+      const seatsToUpdate = getResponse.data || [];
+      
+      if (seatsToUpdate.length === 0) {
+        throw new Error("Seats not found");
+      }
+
+      // Update seats to reserved status
+      const updateParams = {
+        records: seatsToUpdate.map(seat => ({
+          Id: seat.Id,
+          status: "occupied"
+        }))
+      };
+
+      const updateResponse = await apperClient.updateRecord('seat', updateParams);
+
+      if (!updateResponse.success) {
+        console.error(updateResponse.message);
+        throw new Error(updateResponse.message);
+      }
+
       return {
         success: true,
         reservedSeats: seatNumbers,
         expiresAt: new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
       };
     } catch (error) {
-      throw new Error("Failed to reserve seats. Please try again.");
+      if (error?.response?.data?.message) {
+        console.error("Error reserving seats:", error?.response?.data?.message);
+        throw new Error(error.response.data.message);
+      } else {
+        console.error("Error reserving seats:", error.message);
+        throw new Error("Failed to reserve seats. Please try again.");
+      }
     }
   }
 };

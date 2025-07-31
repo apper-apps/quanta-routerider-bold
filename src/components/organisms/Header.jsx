@@ -1,11 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useSelector } from 'react-redux';
 import ApperIcon from "@/components/ApperIcon";
 import Button from "@/components/atoms/Button";
-
+import { AuthContext } from "../../App";
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { logout } = useContext(AuthContext);
+  const { user } = useSelector((state) => state.user);
 
   const navItems = [
     { name: "Search", href: "/", icon: "Search" },
@@ -15,6 +18,10 @@ const Header = () => {
 
   const isActive = (path) => {
     return location.pathname === path;
+  };
+
+  const handleLogout = async () => {
+    await logout();
   };
 
   return (
@@ -34,23 +41,40 @@ const Header = () => {
             </div>
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.name}
-                to={item.href}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                  isActive(item.href)
-                    ? "bg-gradient-to-r from-primary/10 to-blue-600/10 text-primary border border-primary/20"
-                    : "text-gray-600 hover:text-primary hover:bg-gray-50"
-                }`}
+{/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-4">
+            <nav className="flex items-center space-x-1">
+              {navItems.map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                    isActive(item.href)
+                      ? "bg-gradient-to-r from-primary/10 to-blue-600/10 text-primary border border-primary/20"
+                      : "text-gray-600 hover:text-primary hover:bg-gray-50"
+                  }`}
+                >
+                  <ApperIcon name={item.icon} size={18} />
+                  {item.name}
+                </Link>
+              ))}
+            </nav>
+            
+            {/* User Menu */}
+            <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
+              <div className="text-sm text-gray-600">
+                Welcome, {user?.firstName || 'User'}
+              </div>
+              <Button
+                onClick={handleLogout}
+                variant="outline"
+                size="sm"
+                icon="LogOut"
               >
-                <ApperIcon name={item.icon} size={18} />
-                {item.name}
-              </Link>
-            ))}
-          </nav>
+                Logout
+              </Button>
+            </div>
+          </div>
 
           {/* Mobile Menu Button */}
           <button
@@ -61,7 +85,7 @@ const Header = () => {
           </button>
         </div>
 
-        {/* Mobile Navigation */}
+{/* Mobile Navigation */}
         {isMobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-gray-200 animate-fadeIn">
             <nav className="space-y-2">
@@ -80,6 +104,20 @@ const Header = () => {
                   {item.name}
                 </Link>
               ))}
+              
+              {/* Mobile User Menu */}
+              <div className="pt-4 border-t border-gray-200 mt-4">
+                <div className="px-4 py-2 text-sm text-gray-600">
+                  Welcome, {user?.firstName || 'User'}
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all duration-200 text-gray-600 hover:text-primary hover:bg-gray-50 w-full"
+                >
+                  <ApperIcon name="LogOut" size={20} />
+                  Logout
+                </button>
+              </div>
             </nav>
           </div>
         )}

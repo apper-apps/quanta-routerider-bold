@@ -1,124 +1,231 @@
-import routesData from "@/services/mockData/routes.json";
-
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
 export const routeService = {
-async searchRoutes(origin, destination, date, filters = {}) {
-    await delay(300);
-    
+  async searchRoutes(origin, destination, date, filters = {}) {
     try {
-      let filteredRoutes = [...routesData];
-      
+      // Initialize ApperClient with Project ID and Public Key
+      const { ApperClient } = window.ApperSDK;
+      const apperClient = new ApperClient({
+        apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+        apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+      });
+
+      const params = {
+        fields: [
+          { field: { Name: "Name" } },
+          { field: { Name: "origin" } },
+          { field: { Name: "destination" } },
+          { field: { Name: "departureTime" } },
+          { field: { Name: "arrivalTime" } },
+          { field: { Name: "operator" } },
+          { field: { Name: "busType" } },
+          { field: { Name: "price" } },
+          { field: { Name: "availableSeats" } },
+          { field: { Name: "duration" } },
+          { field: { Name: "amenities" } }
+        ],
+        where: [],
+        orderBy: [{ fieldName: "departureTime", sorttype: "ASC" }],
+        pagingInfo: { limit: 50, offset: 0 }
+      };
+
+      // Add search filters
       if (origin && destination) {
-        filteredRoutes = filteredRoutes.filter(route => 
-          route.origin.toLowerCase().includes(origin.toLowerCase()) &&
-          route.destination.toLowerCase().includes(destination.toLowerCase())
+        params.where.push(
+          { FieldName: "origin", Operator: "Contains", Values: [origin] },
+          { FieldName: "destination", Operator: "Contains", Values: [destination] }
         );
       }
-      
-      // Apply filters
-      filteredRoutes = this.applyRouteFilters(filteredRoutes, filters);
-      
-      // Sort by departure time
-      filteredRoutes.sort((a, b) => a.departureTime.localeCompare(b.departureTime));
-      
-      return filteredRoutes;
+
+      // Apply additional filters
+      if (filters.amenities?.length > 0) {
+        params.where.push({
+          FieldName: "amenities",
+          Operator: "Contains",
+          Values: filters.amenities
+        });
+      }
+
+      if (filters.busTypes?.length > 0) {
+        params.where.push({
+          FieldName: "busType",
+          Operator: "Contains",
+          Values: filters.busTypes
+        });
+      }
+
+      const response = await apperClient.fetchRecords('route', params);
+
+      if (!response.success) {
+        console.error(response.message);
+        throw new Error(response.message);
+      }
+
+      return response.data || [];
     } catch (error) {
-      throw new Error("Failed to search routes. Please try again.");
+      if (error?.response?.data?.message) {
+        console.error("Error searching routes:", error?.response?.data?.message);
+        throw new Error(error.response.data.message);
+      } else {
+        console.error("Error searching routes:", error.message);
+        throw new Error("Failed to search routes. Please try again.");
+      }
     }
   },
 
   async getRouteById(id) {
-    await delay(200);
-    
     try {
-      const route = routesData.find(r => r.Id === parseInt(id));
-      if (!route) {
+      // Initialize ApperClient with Project ID and Public Key
+      const { ApperClient } = window.ApperSDK;
+      const apperClient = new ApperClient({
+        apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+        apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+      });
+
+      const params = {
+        fields: [
+          { field: { Name: "Name" } },
+          { field: { Name: "origin" } },
+          { field: { Name: "destination" } },
+          { field: { Name: "departureTime" } },
+          { field: { Name: "arrivalTime" } },
+          { field: { Name: "operator" } },
+          { field: { Name: "busType" } },
+          { field: { Name: "price" } },
+          { field: { Name: "availableSeats" } },
+          { field: { Name: "duration" } },
+          { field: { Name: "amenities" } }
+        ]
+      };
+
+      const response = await apperClient.getRecordById('route', parseInt(id), params);
+
+      if (!response.success) {
+        console.error(response.message);
+        throw new Error(response.message);
+      }
+
+      if (!response.data) {
         throw new Error("Route not found");
       }
-      return { ...route };
+
+      return response.data;
     } catch (error) {
-      throw new Error("Failed to fetch route details. Please try again.");
+      if (error?.response?.data?.message) {
+        console.error("Error fetching route with ID " + id + ":", error?.response?.data?.message);
+        throw new Error(error.response.data.message);
+      } else {
+        console.error("Error fetching route:", error.message);
+        throw new Error("Failed to fetch route details. Please try again.");
+      }
     }
   },
 
   async getAllRoutes() {
-    await delay(250);
-    
     try {
-      return [...routesData];
+      // Initialize ApperClient with Project ID and Public Key
+      const { ApperClient } = window.ApperSDK;
+      const apperClient = new ApperClient({
+        apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+        apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+      });
+
+      const params = {
+        fields: [
+          { field: { Name: "Name" } },
+          { field: { Name: "origin" } },
+          { field: { Name: "destination" } },
+          { field: { Name: "departureTime" } },
+          { field: { Name: "arrivalTime" } },
+          { field: { Name: "operator" } },
+          { field: { Name: "busType" } },
+          { field: { Name: "price" } },
+          { field: { Name: "availableSeats" } },
+          { field: { Name: "duration" } },
+          { field: { Name: "amenities" } }
+        ],
+        orderBy: [{ fieldName: "departureTime", sorttype: "ASC" }],
+        pagingInfo: { limit: 100, offset: 0 }
+      };
+
+      const response = await apperClient.fetchRecords('route', params);
+
+      if (!response.success) {
+        console.error(response.message);
+        throw new Error(response.message);
+      }
+
+      return response.data || [];
     } catch (error) {
-      throw new Error("Failed to fetch routes. Please try again.");
+      if (error?.response?.data?.message) {
+        console.error("Error fetching routes:", error?.response?.data?.message);
+        throw new Error(error.response.data.message);
+      } else {
+        console.error("Error fetching routes:", error.message);
+        throw new Error("Failed to fetch routes. Please try again.");
+      }
     }
   },
 
-async getPopularRoutes(filters = {}) {
-    await delay(200);
-    
+  async getPopularRoutes(filters = {}) {
     try {
-      // Return routes with higher available seats (more popular)
-      let popular = [...routesData]
-        .sort((a, b) => b.availableSeats - a.availableSeats)
-        .slice(0, 12);
-      
+      // Initialize ApperClient with Project ID and Public Key
+      const { ApperClient } = window.ApperSDK;
+      const apperClient = new ApperClient({
+        apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+        apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+      });
+
+      const params = {
+        fields: [
+          { field: { Name: "Name" } },
+          { field: { Name: "origin" } },
+          { field: { Name: "destination" } },
+          { field: { Name: "departureTime" } },
+          { field: { Name: "arrivalTime" } },
+          { field: { Name: "operator" } },
+          { field: { Name: "busType" } },
+          { field: { Name: "price" } },
+          { field: { Name: "availableSeats" } },
+          { field: { Name: "duration" } },
+          { field: { Name: "amenities" } }
+        ],
+        where: [],
+        orderBy: [{ fieldName: "availableSeats", sorttype: "DESC" }],
+        pagingInfo: { limit: 12, offset: 0 }
+      };
+
       // Apply filters
-      popular = this.applyRouteFilters(popular, filters);
-      
-      return popular;
-    } catch (error) {
-      throw new Error("Failed to fetch popular routes. Please try again.");
-    }
-  },
-
-  applyRouteFilters(routes, filters) {
-    if (!filters || (!filters.amenities?.length && !filters.timeSlots?.length && !filters.busTypes?.length)) {
-      return routes;
-    }
-
-    return routes.filter(route => {
-      // Amenities filter
       if (filters.amenities?.length > 0) {
-        const routeAmenities = route.amenities.map(a => {
-          if (a.toLowerCase().includes('wifi')) return 'wifi';
-          if (a.toLowerCase().includes('charging')) return 'charging';
-          if (a.toLowerCase().includes('air conditioning')) return 'ac';
-          if (a.toLowerCase().includes('restroom')) return 'restroom';
-          if (a.toLowerCase().includes('reclining')) return 'reclining';
-          if (a.toLowerCase().includes('legroom')) return 'legroom';
-          return null;
-        }).filter(Boolean);
-        
-        const hasRequiredAmenities = filters.amenities.every(filter => 
-          routeAmenities.includes(filter)
-        );
-        if (!hasRequiredAmenities) return false;
+        params.where.push({
+          FieldName: "amenities",
+          Operator: "Contains",
+          Values: filters.amenities
+        });
       }
 
-      // Time slots filter
-      if (filters.timeSlots?.length > 0) {
-        const hour = parseInt(route.departureTime.split(':')[0]);
-        const timeSlot = 
-          hour >= 6 && hour < 12 ? 'morning' :
-          hour >= 12 && hour < 18 ? 'afternoon' :
-          hour >= 18 ? 'evening' : 'night';
-        
-        if (!filters.timeSlots.includes(timeSlot)) return false;
-      }
-
-      // Bus types filter
       if (filters.busTypes?.length > 0) {
-        const busType = route.busType.toLowerCase();
-        const matchingType = 
-          busType.includes('standard') ? 'standard' :
-          busType.includes('premium') ? 'premium' :
-          busType.includes('luxury') ? 'luxury' :
-          busType.includes('express') ? 'express' :
-          busType.includes('sleeper') ? 'sleeper' : null;
-        
-        if (!matchingType || !filters.busTypes.includes(matchingType)) return false;
+        params.where.push({
+          FieldName: "busType",
+          Operator: "Contains",
+          Values: filters.busTypes
+        });
       }
 
-      return true;
-    });
+      const response = await apperClient.fetchRecords('route', params);
+
+      if (!response.success) {
+        console.error(response.message);
+        throw new Error(response.message);
+      }
+
+      return response.data || [];
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error("Error fetching popular routes:", error?.response?.data?.message);
+        throw new Error(error.response.data.message);
+      } else {
+        console.error("Error fetching popular routes:", error.message);
+        throw new Error("Failed to fetch popular routes. Please try again.");
+      }
+    }
   }
 };

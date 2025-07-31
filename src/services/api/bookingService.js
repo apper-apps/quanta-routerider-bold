@@ -1,77 +1,249 @@
-import bookingsData from "@/services/mockData/bookings.json";
-
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-let mockBookings = [...bookingsData];
-
 export const bookingService = {
   async createBooking(bookingData) {
-    await delay(800);
-    
     try {
-      const newId = Math.max(...mockBookings.map(b => b.Id), 0) + 1;
-      const bookingReference = `RR-${new Date().getFullYear()}-${String(newId).padStart(3, "0")}`;
+      // Initialize ApperClient with Project ID and Public Key
+      const { ApperClient } = window.ApperSDK;
+      const apperClient = new ApperClient({
+        apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+        apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+      });
+
+      const bookingReference = `RR-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
       
       const newBooking = {
-        Id: newId,
-        ...bookingData,
+        Name: `Booking ${bookingReference}`,
+        routeId: parseInt(bookingData.routeId),
+        seats: Array.isArray(bookingData.seats) ? bookingData.seats.join('\n') : bookingData.seats,
+        passengers: typeof bookingData.passengers === 'object' 
+          ? JSON.stringify(bookingData.passengers) 
+          : bookingData.passengers,
+        totalPrice: parseFloat(bookingData.totalPrice),
         status: "confirmed",
         bookingDate: new Date().toISOString(),
+        travelDate: bookingData.travelDate,
         bookingReference
       };
-      
-      mockBookings.push(newBooking);
-      
-      return { 
-        ...newBooking,
-        qrCode: `data:image/svg+xml;base64,${btoa(`<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="200" fill="white"/><rect x="20" y="20" width="160" height="160" fill="black"/><rect x="40" y="40" width="120" height="120" fill="white"/><text x="100" y="105" text-anchor="middle" font-family="Arial" font-size="12" fill="black">${bookingReference}</text></svg>`)}`
+
+      const params = {
+        records: [newBooking]
       };
+
+      const response = await apperClient.createRecord('booking', params);
+
+      if (!response.success) {
+        console.error(response.message);
+        throw new Error(response.message);
+      }
+
+      if (response.results) {
+        const successfulRecords = response.results.filter(result => result.success);
+        const failedRecords = response.results.filter(result => !result.success);
+        
+        if (failedRecords.length > 0) {
+          console.error(`Failed to create booking ${failedRecords.length} records:${JSON.stringify(failedRecords)}`);
+          
+          failedRecords.forEach(record => {
+            record.errors?.forEach(error => {
+              console.error(`${error.fieldLabel}: ${error.message}`);
+            });
+            if (record.message) console.error(record.message);
+          });
+          
+          throw new Error("Failed to create booking");
+        }
+
+        const createdBooking = successfulRecords[0]?.data;
+        return {
+          ...createdBooking,
+          passengers: typeof createdBooking.passengers === 'string' 
+            ? JSON.parse(createdBooking.passengers) 
+            : createdBooking.passengers,
+          seats: typeof createdBooking.seats === 'string' 
+            ? createdBooking.seats.split('\n') 
+            : createdBooking.seats,
+          qrCode: `data:image/svg+xml;base64,${btoa(`<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="200" fill="white"/><rect x="20" y="20" width="160" height="160" fill="black"/><rect x="40" y="40" width="120" height="120" fill="white"/><text x="100" y="105" text-anchor="middle" font-family="Arial" font-size="12" fill="black">${bookingReference}</text></svg>`)}`
+        };
+      }
     } catch (error) {
-      throw new Error("Failed to create booking. Please try again.");
+      if (error?.response?.data?.message) {
+        console.error("Error creating booking:", error?.response?.data?.message);
+        throw new Error(error.response.data.message);
+      } else {
+        console.error("Error creating booking:", error.message);
+        throw new Error("Failed to create booking. Please try again.");
+      }
     }
   },
 
   async getBookings() {
-    await delay(300);
-    
     try {
-      return [...mockBookings].sort((a, b) => new Date(b.bookingDate) - new Date(a.bookingDate));
+      // Initialize ApperClient with Project ID and Public Key
+      const { ApperClient } = window.ApperSDK;
+      const apperClient = new ApperClient({
+        apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+        apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+      });
+
+      const params = {
+        fields: [
+          { field: { Name: "Name" } },
+          { field: { Name: "routeId" } },
+          { field: { Name: "seats" } },
+          { field: { Name: "passengers" } },
+          { field: { Name: "totalPrice" } },
+          { field: { Name: "status" } },
+          { field: { Name: "bookingDate" } },
+          { field: { Name: "travelDate" } },
+          { field: { Name: "bookingReference" } }
+        ],
+        orderBy: [{ fieldName: "bookingDate", sorttype: "DESC" }],
+        pagingInfo: { limit: 100, offset: 0 }
+      };
+
+      const response = await apperClient.fetchRecords('booking', params);
+
+      if (!response.success) {
+        console.error(response.message);
+        throw new Error(response.message);
+      }
+
+      const bookings = response.data || [];
+      
+      // Parse passengers and seats fields
+      return bookings.map(booking => ({
+        ...booking,
+        passengers: typeof booking.passengers === 'string' 
+          ? JSON.parse(booking.passengers) 
+          : booking.passengers || [],
+        seats: typeof booking.seats === 'string' 
+          ? booking.seats.split('\n') 
+          : booking.seats || []
+      }));
     } catch (error) {
-      throw new Error("Failed to fetch bookings. Please try again.");
+      if (error?.response?.data?.message) {
+        console.error("Error fetching bookings:", error?.response?.data?.message);
+        throw new Error(error.response.data.message);
+      } else {
+        console.error("Error fetching bookings:", error.message);
+        throw new Error("Failed to fetch bookings. Please try again.");
+      }
     }
   },
 
   async getBookingById(id) {
-    await delay(200);
-    
     try {
-      const booking = mockBookings.find(b => b.Id === parseInt(id));
-      if (!booking) {
+      // Initialize ApperClient with Project ID and Public Key
+      const { ApperClient } = window.ApperSDK;
+      const apperClient = new ApperClient({
+        apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+        apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+      });
+
+      const params = {
+        fields: [
+          { field: { Name: "Name" } },
+          { field: { Name: "routeId" } },
+          { field: { Name: "seats" } },
+          { field: { Name: "passengers" } },
+          { field: { Name: "totalPrice" } },
+          { field: { Name: "status" } },
+          { field: { Name: "bookingDate" } },
+          { field: { Name: "travelDate" } },
+          { field: { Name: "bookingReference" } }
+        ]
+      };
+
+      const response = await apperClient.getRecordById('booking', parseInt(id), params);
+
+      if (!response.success) {
+        console.error(response.message);
+        throw new Error(response.message);
+      }
+
+      if (!response.data) {
         throw new Error("Booking not found");
       }
-      return { ...booking };
+
+      const booking = response.data;
+      return {
+        ...booking,
+        passengers: typeof booking.passengers === 'string' 
+          ? JSON.parse(booking.passengers) 
+          : booking.passengers || [],
+        seats: typeof booking.seats === 'string' 
+          ? booking.seats.split('\n') 
+          : booking.seats || []
+      };
     } catch (error) {
-      throw new Error("Failed to fetch booking details. Please try again.");
+      if (error?.response?.data?.message) {
+        console.error("Error fetching booking with ID " + id + ":", error?.response?.data?.message);
+        throw new Error(error.response.data.message);
+      } else {
+        console.error("Error fetching booking:", error.message);
+        throw new Error("Failed to fetch booking details. Please try again.");
+      }
     }
   },
 
   async cancelBooking(id) {
-    await delay(400);
-    
     try {
-      const bookingIndex = mockBookings.findIndex(b => b.Id === parseInt(id));
-      if (bookingIndex === -1) {
-        throw new Error("Booking not found");
-      }
-      
-      mockBookings[bookingIndex] = {
-        ...mockBookings[bookingIndex],
-        status: "cancelled"
+      // Initialize ApperClient with Project ID and Public Key
+      const { ApperClient } = window.ApperSDK;
+      const apperClient = new ApperClient({
+        apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+        apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+      });
+
+      const params = {
+        records: [{
+          Id: parseInt(id),
+          status: "cancelled"
+        }]
       };
-      
-      return { ...mockBookings[bookingIndex] };
+
+      const response = await apperClient.updateRecord('booking', params);
+
+      if (!response.success) {
+        console.error(response.message);
+        throw new Error(response.message);
+      }
+
+      if (response.results) {
+        const successfulUpdates = response.results.filter(result => result.success);
+        const failedUpdates = response.results.filter(result => !result.success);
+        
+        if (failedUpdates.length > 0) {
+          console.error(`Failed to cancel booking ${failedUpdates.length} records:${JSON.stringify(failedUpdates)}`);
+          
+          failedUpdates.forEach(record => {
+            record.errors?.forEach(error => {
+              console.error(`${error.fieldLabel}: ${error.message}`);
+            });
+            if (record.message) console.error(record.message);
+          });
+          
+          throw new Error("Failed to cancel booking");
+        }
+
+        const updatedBooking = successfulUpdates[0]?.data;
+        return {
+          ...updatedBooking,
+          passengers: typeof updatedBooking.passengers === 'string' 
+            ? JSON.parse(updatedBooking.passengers) 
+            : updatedBooking.passengers || [],
+          seats: typeof updatedBooking.seats === 'string' 
+            ? updatedBooking.seats.split('\n') 
+            : updatedBooking.seats || []
+        };
+      }
     } catch (error) {
-      throw new Error("Failed to cancel booking. Please try again.");
+      if (error?.response?.data?.message) {
+        console.error("Error cancelling booking:", error?.response?.data?.message);
+        throw new Error(error.response.data.message);
+      } else {
+        console.error("Error cancelling booking:", error.message);
+        throw new Error("Failed to cancel booking. Please try again.");
+      }
     }
   }
 };
