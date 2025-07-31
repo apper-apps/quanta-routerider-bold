@@ -1,7 +1,8 @@
 import React from "react";
 import ApperIcon from "@/components/ApperIcon";
-import Badge from "@/components/Badge";
-const SeatGrid = ({ seats, selectedSeats, onSeatSelect }) => {
+import Badge from "@/components/atoms/Badge";
+
+function SeatGrid({ seats, selectedSeats, onSeatSelect }) {
   const handleSeatClick = (seat) => {
     if (seat.status === "occupied") return;
     onSeatSelect(seat);
