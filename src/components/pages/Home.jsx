@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import ApperIcon from "@/components/atoms/ApperIcon";
+import ApperIcon from "@/components/ApperIcon.jsx";
 import SearchSection from "@/components/organisms/SearchSection";
 import BookingConfirmation from "@/components/organisms/BookingConfirmation";
 import SeatSelection from "@/components/organisms/SeatSelection";
