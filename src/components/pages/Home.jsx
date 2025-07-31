@@ -1,9 +1,9 @@
 import React, { useState } from "react";
+import ApperIcon from "@/components/atoms/ApperIcon";
 import SearchSection from "@/components/organisms/SearchSection";
+import BookingConfirmation from "@/components/organisms/BookingConfirmation";
 import SeatSelection from "@/components/organisms/SeatSelection";
 import BookingFlow from "@/components/organisms/BookingFlow";
-import BookingConfirmation from "@/components/organisms/BookingConfirmation";
-import ApperIcon from "@/components/atoms/ApperIcon";
 
 const Home = () => {
   const [step, setStep] = useState("search"); // search, seats, booking, confirmation
